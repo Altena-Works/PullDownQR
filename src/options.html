@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>PullDown QR 設定</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; padding: 28px;
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1b1f24; background: #f6f7f9;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 240px; gap: 28px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .lead { color: #6b7280; margin: 0 0 20px; }
+    .card { background: #fff; border: 1px solid #e7e9ee; border-radius: 14px; padding: 20px 22px; }
+    .field { margin: 0 0 18px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label { display: block; font-weight: 600; margin-bottom: 6px; }
+    .desc { color: #6b7280; font-size: 12px; margin: 2px 0 8px; }
+    input[type=range] { width: 100%; }
+    select, input[type=number] {
+      font: inherit; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: inherit;
+    }
+    input[type=color] { width: 44px; height: 30px; border: 1px solid #d1d5db; border-radius: 8px; background: none; }
+    .inline { display: flex; align-items: center; gap: 10px; }
+    .switch { position: relative; width: 42px; height: 24px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; cursor: pointer; background: #cbd5e1; border-radius: 999px; transition: background .15s; }
+    .slider::before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition: transform .15s; }
+    input:checked + .slider { background: #2563eb; }
+    input:checked + .slider::before { transform: translateX(18px); }
+    .preview { position: sticky; top: 28px; }
+    .preview .card { text-align: center; }
+    .preview canvas { border-radius: 6px; image-rendering: pixelated; }
+    .preview .pv-url { font-size: 11px; color: #6b7280; word-break: break-all; margin-top: 8px; }
+    .preview h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin: 0 0 10px; }
+    footer { grid-column: 1 / -1; color: #6b7280; font-size: 12px; }
+    a { color: #2563eb; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #161a22; color: #e6e8eb; }
+      .card { background: #1f2430; border-color: #2a3140; }
+      .lead, .desc, .preview h2, .preview .pv-url, footer { color: #9aa3af; }
+      select, input[type=number] { background: #161a22; border-color: #3a4356; color: #e6e8eb; }
+      .slider { background: #495163; }
+    }
+    @media (max-width: 680px) { .wrap { grid-template-columns: 1fr; } .preview { position: static; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <h1>PullDown QR 設定</h1>
+      <p class="lead">リンクにホバーで即QRコード表示。すべてローカル処理で、URLが外部に送信されることはありません。</p>
+
+      <div class="card">
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="enabled"><span class="slider"></span></label>
+            <label for="enabled" style="margin:0">拡張機能を有効にする</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="requireAlt"><span class="slider"></span></label>
+            <label for="requireAlt" style="margin:0"><span class="modkey">Alt</span>キーを押している間だけ表示</label>
+          </div>
+          <p class="desc">オンにすると、リンクにホバーしても <strong class="modkey">Alt</strong> を押している時だけQRが出ます（誤表示を抑えたい人向け）。</p>
+        </div>
+
+        <div class="field">
+          <label for="hoverDelayMs">表示までの遅延: <span id="hoverDelayMsVal"></span> ミリ秒</label>
+          <p class="desc">0 = 完全に即時。少し値を入れるとマウスを素早く動かした時のチラつきを抑えられます。</p>
+          <input type="range" id="hoverDelayMs" min="0" max="500" step="10">
+        </div>
+
+        <div class="field">
+          <label for="qrSize">QRコードのサイズ: <span id="qrSizeVal"></span> px</label>
+          <input type="range" id="qrSize" min="120" max="360" step="8">
+        </div>
+
+        <div class="field">
+          <label for="ecc">誤り訂正レベル</label>
+          <p class="desc">高いほど汚れ・歪みに強いですが、QRが密になります（L→M→Q→H）。</p>
+          <select id="ecc">
+            <option value="L">L（7%）</option>
+            <option value="M">M（15%）</option>
+            <option value="Q">Q（25%）</option>
+            <option value="H">H（30%）</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="position">表示位置</label>
+          <select id="position">
+            <option value="link">リンクの下に固定</option>
+            <option value="cursor">マウスカーソルに追従</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="showUrl"><span class="slider"></span></label>
+            <label for="showUrl" style="margin:0">QRの下にURLテキストを表示</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>色</label>
+          <div class="inline">
+            <input type="color" id="darkColor"> <span class="desc" style="margin:0">モジュール</span>
+            <input type="color" id="lightColor"> <span class="desc" style="margin:0">背景</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="font-size:15px;margin:24px 0 10px">不要な場所で表示しない</h2>
+      <div class="card">
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="skipSameSiteLinks"><span class="slider"></span></label>
+            <label for="skipSameSiteLinks" style="margin:0">同じサイト内のリンクでは表示しない（外部リンクのみ）</label>
+          </div>
+          <p class="desc"><strong>今開いているサイトと同じドメイン</strong>へのリンクを抑制します。GitHub・SNS・管理画面などの「アプリ内リンク」でQRが出るのを防ぎ、<strong>スマホで開きたい外部リンクだけ</strong>に絞れます。同一サイトのページもQRにしたい場合はオフに。</p>
+        </div>
+
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="skipSamePathLinks"><span class="slider"></span></label>
+            <label for="skipSamePathLinks" style="margin:0">同一ページ内のリンクでは表示しない</label>
+          </div>
+          <p class="desc">検索結果のタブ・ページ送り・並べ替え・絞り込みなど、<strong>現在のページとパスが同じでパラメータだけ違うリンク</strong>を抑制します。クエリでページを切り替えるサイトでQRを出したい場合はオフに。</p>
+        </div>
+
+        <div class="field">
+          <div class="inline">
+            <label class="switch"><input type="checkbox" id="skipNavLinks"><span class="slider"></span></label>
+            <label for="skipNavLinks" style="margin:0">ナビゲーション領域では表示しない</label>
+          </div>
+          <p class="desc"><code>&lt;nav&gt;</code> や <code>role="navigation" / "tab" / "menu"</code> の中のリンク（サイトのメニュー・タブ列など）を抑制します。</p>
+        </div>
+
+        <div class="field">
+          <label for="excludedSites">除外サイト</label>
+          <p class="desc">1行に1サイト。<code>google.com</code> と書くとサブドメイン（www.google.com 等）も対象。ポップアップの「このサイトでは無効」からも追加できます。</p>
+          <textarea id="excludedSites" rows="4" spellcheck="false" placeholder="google.com&#10;*.example.org" style="width:100%;box-sizing:border-box;font:12px/1.6 monospace;padding:8px;border:1px solid #d1d5db;border-radius:8px;background:inherit;color:inherit"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview">
+      <h2>プレビュー</h2>
+      <div class="card">
+        <canvas id="pv"></canvas>
+        <div class="pv-url" id="pvUrl"></div>
+      </div>
+    </div>
+
+    <footer>
+      QR生成: qrcode-generator (MIT, © Kazuhiko Arase) ／ ショートカット変更は
+      <a href="chrome://extensions/shortcuts" id="shortcuts">chrome://extensions/shortcuts</a>
+    </footer>
+  </div>
+
+  <script src="vendor/qrcode-generator.js"></script>
+  <script src="qr-render.js"></script>
+  <script src="defaults.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

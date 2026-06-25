@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      width: 248px;
+      margin: 0;
+      padding: 14px;
+      font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1b1f24;
+      background: #ffffff;
+    }
+    h1 { font-size: 14px; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+    h1 img { width: 18px; height: 18px; }
+    .sub { color: #6b7280; font-size: 11px; margin: 0 0 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
+    .row label { font-weight: 500; }
+    .switch { position: relative; width: 40px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer; background: #cbd5e1;
+      border-radius: 999px; transition: background .15s;
+    }
+    .slider::before {
+      content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform .15s;
+    }
+    input:checked + .slider { background: #2563eb; }
+    input:checked + .slider::before { transform: translateX(18px); }
+    .field { margin: 12px 0 4px; }
+    .field label { display: block; font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+    input[type=range] { width: 100%; }
+    .hint { font-size: 11px; color: #6b7280; }
+    .actions { margin-top: 14px; border-top: 1px solid #eef0f3; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+    button.link {
+      background: none; border: none; color: #2563eb; cursor: pointer; padding: 0; font-size: 12px;
+    }
+    kbd {
+      font: 11px monospace; background: #f1f3f5; border: 1px solid #d9dde2;
+      border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px;
+    }
+    .pageqr {
+      margin: 10px 0 14px; padding: 12px; border: 1px solid #e7e9ee; border-radius: 12px;
+      text-align: center; background: #fafbfc;
+    }
+    .pageqr-cap { font-size: 11px; color: #6b7280; margin-bottom: 8px; }
+    .pageqr canvas { border-radius: 6px; image-rendering: pixelated; cursor: pointer; }
+    .pageqr-url {
+      margin-top: 8px; font-size: 11px; color: #4b5563; word-break: break-all; cursor: pointer;
+    }
+    .pageqr-url:hover { color: #2563eb; text-decoration: underline; }
+    .pageqr-status { margin-top: 6px; font-size: 11px; color: #16a34a; min-height: 14px; }
+    .pageqr-note { font-size: 11px; color: #9aa3af; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1f2430; color: #e6e8eb; }
+      .sub, .field label, .hint, .pageqr-cap, .pageqr-note { color: #9aa3af; }
+      .slider { background: #495163; }
+      kbd { background: #2a3140; border-color: #3a4356; color: #e6e8eb; }
+      .actions { border-color: #2a3140; }
+      .pageqr { background: #232936; border-color: #2a3140; }
+      .pageqr-url { color: #cbd5e1; }
+    }
+  </style>
+</head>
+<body>
+  <h1><img src="../icons/icon48.png" alt=""> PullDown QR</h1>
+  <p class="sub">リンクにホバーで即QRコード表示</p>
+
+  <div class="pageqr" id="pageQrWrap" hidden>
+    <div class="pageqr-cap">このページのQR（クリックでコピー）</div>
+    <canvas id="pageQr"></canvas>
+    <div class="pageqr-url" id="pageQrUrl"></div>
+    <div class="pageqr-status" id="pageQrStatus"></div>
+  </div>
+  <p class="pageqr-note" id="pageQrNote" hidden>このページのURLは取得できません（chrome:// など）。</p>
+
+  <div class="row">
+    <label for="enabled">有効</label>
+    <label class="switch">
+      <input type="checkbox" id="enabled">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="field">
+    <label for="qrSize">QRサイズ: <span id="qrSizeVal"></span>px</label>
+    <input type="range" id="qrSize" min="120" max="360" step="8">
+  </div>
+
+  <div class="row">
+    <label for="requireAlt"><span class="modkey">Alt</span>キーを押している間だけ表示</label>
+    <label class="switch">
+      <input type="checkbox" id="requireAlt">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="row">
+    <label for="skipSameSiteLinks">同じサイト内のリンクは出さない<br>
+      <span class="hint" style="font-weight:400">外部リンクのみQR表示</span></label>
+    <label class="switch">
+      <input type="checkbox" id="skipSameSiteLinks">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="row" id="siteRow" hidden>
+    <label for="siteOff">このサイトでは無効<br>
+      <span class="hint" id="siteHost" style="font-weight:400"></span></label>
+    <label class="switch">
+      <input type="checkbox" id="siteOff">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <p class="hint">ショートカット <kbd id="scKbd">Alt+Shift+Q</kbd> でオン/オフ</p>
+
+  <div class="actions">
+    <button class="link" id="openOptions">詳細設定…</button>
+    <button class="link" id="openShortcuts">ショートカット変更</button>
+  </div>
+
+  <script src="vendor/qrcode-generator.js"></script>
+  <script src="qr-render.js"></script>
+  <script src="defaults.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
